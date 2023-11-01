@@ -12,7 +12,6 @@ async def text(message: types.message):
 
     if command == 'Заглянуть под Ёлочку':
         await Gift(message=message).send()
-        #await dp.bot.send_sticker(chat_id=message.from_user.id, sticker='CAACAgIAAxkBAAEKqIdlQmXS0tH4Znmla958MeNpr5Rv6gACswsAAipQUUoso7YJ7GnT1jME')
 
         await message.delete()
 

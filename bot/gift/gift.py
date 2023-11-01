@@ -5,17 +5,22 @@ from db.db import connector_db_sqlite
 from loader import dp
 
 
-class Gift():
+class Gift:
     def __init__(self, message: types.message):
         self.path_gift = os.path.join(f'{os.getcwd()}/gift/users')
-        self.message_text = '<b>🎄 С новым годом! 🎉🍾</b>'
-        self.message_received_gift_text = '<b>Приходи в следующем году!</b>'
+        self.message_text = '<b>🎄 С новым годом! 🎉🍾</b>\n\nДедушка Мороз положил под елочку подарок:'
+        self.message_text_not_gift = '<b>🎄 С новым годом! 🎉🍾</b>\n\nТвой подарок дедушка Дедушка Мороз положил под другую ёлочку =)'
+        self.message_text_received_gift = '<b>Приходи в следующем году!</b>'
 
         self.message = message
         self.user_id = message.from_user.id
 
     async def is_received_gift(self):
-        users_id = await connector_db_sqlite(SQLITE_PATH, f'SELECT user_id FROM received_gift WHERE user_id = {self.user_id}', '')
+        users_id = await connector_db_sqlite(
+            base=SQLITE_PATH,
+            query=f'SELECT user_id FROM received_gift WHERE user_id = {self.user_id}',
+            data='',
+        )
 
         if users_id[1]:
             return True
@@ -23,12 +28,17 @@ class Gift():
             return False
 
     async def set_received_gift(self):
-        await connector_db_sqlite(SQLITE_PATH, f'INSERT INTO received_gift (user_id) VALUES ({self.user_id})', '')
+        await connector_db_sqlite(
+            base=SQLITE_PATH,
+            query=f'INSERT INTO received_gift (user_id) VALUES ({self.user_id})',
+            data='',
+        )
 
     def check_gift(self):
         return os.path.exists(os.path.join(f'{self.path_gift}/{self.user_id}', 'gift.jpg'))
 
-    async def tg_notification(self, text: str):
+    @staticmethod
+    async def tg_notification(text: str):
         for admin in ADMINS:
             await dp.bot.send_message(
                 chat_id=admin,
@@ -36,18 +46,19 @@ class Gift():
 
     async def send(self):
         is_received_gift = await self.is_received_gift()
+
         if not is_received_gift:
             await dp.bot.send_sticker(
                 chat_id=self.user_id,
                 sticker='CAACAgIAAxkBAAEKqIdlQmXS0tH4Znmla958MeNpr5Rv6gACswsAAipQUUoso7YJ7GnT1jME',
             )
 
-            await dp.bot.send_message(
-                chat_id=self.user_id,
-                text=self.message_text,
-            )
-
             if self.check_gift():
+                await dp.bot.send_message(
+                    chat_id=self.user_id,
+                    text=self.message_text,
+                )
+
                 with open(f'{self.path_gift}/{self.user_id}/gift.jpg', 'rb') as photo:
                     await dp.bot.send_photo(
                         chat_id=self.user_id,
@@ -57,13 +68,17 @@ class Gift():
                 text = f'Пользователь {self.user_id} || {self.message.chat.first_name} {self.message.chat.last_name} || @{self.message.chat.username} - Получил подарок!'
                 await self.tg_notification(text=text)
 
-                await self.set_received_gift()
-
             else:
+                await dp.bot.send_message(
+                    chat_id=self.user_id,
+                    text=self.message_text_not_gift,
+                )
                 text = f'Пользователь {self.user_id} || {self.message.chat.first_name} {self.message.chat.last_name} || @{self.message.chat.username} - Пытался получить подарок!'
                 await self.tg_notification(text=text)
+
+            await self.set_received_gift()
         else:
             await dp.bot.send_message(
                 chat_id=self.user_id,
-                text=self.message_received_gift_text,
+                text=self.message_text_received_gift,
             )
