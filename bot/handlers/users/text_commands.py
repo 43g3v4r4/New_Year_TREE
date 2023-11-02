@@ -16,4 +16,4 @@ async def text(message: types.message):
         await message.delete()
 
     else:
-        await message.answer('Нажми на любую из кнопок или введи /start!')
+        await message.answer('Загляни под Ёлочку или введи /start!')
